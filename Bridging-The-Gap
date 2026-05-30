@@ -1,0 +1,970 @@
+/*
+Works Cited
+- Replay Button Icon: <a href="https://www.flaticon.com/free-icons/again" title="again icons">Again icons created by vectaicon - Flaticon</a>
+- ChatGPT: 
+	- Used to create custon slider class (needed this rather than HTML version for custom positioning and more control over style)
+	- Initial version of GrowingRing class (but this was heavily modified later)
+	- drawMouseIcon (fully from ChatGPT)
+- Replay button logic (same as button from previous assignment (makeup palette))
+- ColorScale code from Martin's in-class example
+- Data: https://osf.io/pfxq3/ (from data-is-plural)
+- Small multiples order: from 538 example in class
+- Scrolly telly:
+	- https://editor.p5js.org/stalgiag/sketches/d4gpE17RX
+	- mouse icon inspo from: https://codepen.io/kode88/pen/KydBxY 
+*/
+
+/*
+Changes from last time:
+- More consideration for key message with scrolly-telling in the beginning to emphasize Roe v. Wade in 2022
+- Changed to hovering rather than clicking for more intuitive behavior
+	- Added feedback for hover over states and slider
+- Left-aligned text in title and updated typography
+*/
+
+/*
+Artistic Statement:
+
+My goal was to show the stark increase in the average distance to abortion facilities in some states after Roe v. Wade was
+overturned. In order to do this, I played with the idea of small multiples, where each state was represented by a circle
+that was geographically positioned close to where it was in the real-world. Then, I used visual hierarchy in the color and 
+radius of the circles in order to highlight the huge increase in distance.
+
+To demonstrate a progression over time, I created two modes:
+	1. An animated progression that would automatically advance the year so users could get a seamless high-level overview.
+		- note the slight pause in 2022 to emphasize when Roe v. Wade was overturned
+	2. Manual control over the slider to get more nuanced/slower information
+
+Lastly, clicking on the individual states gives more information about individual states and their distances. This information
+box also maintains the visual hierarchy by using the same colors for the background fill of the rectangle.
+
+*/
+
+let rings = []; // Array to hold multiple GrowingRing instances
+let slider; // Slider to control the index of the radius
+
+let stateData;
+let statePos;
+let stateDict = {};
+let posDict = {}
+let backButton;
+
+let ANIMATE = 0;
+let SPECIFIC = 1;
+let TITLE = 2;
+let transitionTime = 500;
+let startTime;
+let numYears = 16;
+
+// let state = ANIMATE
+let state = TITLE;
+let colorScale;
+
+let scaleMin = 100000;
+let scaleMax = 0;
+let replay;
+let selectedRingInfo = "";
+let selectedRing;
+
+let columns = 11;
+let rows = 8;
+
+let mouseScrollAmount = 0;
+let maximum = 2000;
+let scrollDirection = 0;
+
+let abbDict = {
+  "AL": "Alabama",
+  "AK": "Alaska",
+  "AZ": "Arizona",
+  "AR": "Arkansas",
+  "CA": "California",
+  "CO": "Colorado",
+  "CT": "Connecticut",
+  "DE": "Delaware",
+  "FL": "Florida",
+  "GA": "Georgia",
+  "HI": "Hawaii",
+  "ID": "Idaho",
+  "IL": "Illinois",
+  "IN": "Indiana",
+  "IA": "Iowa",
+  "KS": "Kansas",
+  "KY": "Kentucky",
+  "LA": "Louisiana",
+  "ME": "Maine",
+  "MD": "Maryland",
+  "MA": "Massachusetts",
+  "MI": "Michigan",
+  "MN": "Minnesota",
+  "MS": "Mississippi",
+  "MO": "Missouri",
+  "MT": "Montana",
+  "NE": "Nebraska",
+  "NV": "Nevada",
+  "NH": "New Hampshire",
+  "NJ": "New Jersey",
+  "NM": "New Mexico",
+  "NY": "New York",
+  "NC": "North Carolina",
+  "ND": "North Dakota",
+  "OH": "Ohio",
+  "OK": "Oklahoma",
+  "OR": "Oregon",
+  "PA": "Pennsylvania",
+  "RI": "Rhode Island",
+  "SC": "South Carolina",
+  "SD": "South Dakota",
+  "TN": "Tennessee",
+  "TX": "Texas",
+  "UT": "Utah",
+  "VT": "Vermont",
+  "VA": "Virginia",
+  "WA": "Washington",
+  "WV": "West Virginia",
+  "WI": "Wisconsin",
+  "WY": "Wyoming",
+	"DC": "Washington D.C."
+};
+
+function preload() {
+  stateData = loadTable('abortion_state_year.csv', 'csv', 'header');
+  statePos = loadTable('State Pos - Sheet2.csv', 'csv', 'header');
+	replay = loadImage("replay (1).png");
+}
+
+let firstSection;
+let secondSection;
+let dotY;           // Y-position of the dot inside the mouse icon
+let mouseYMin, mouseYMax; // Limits for the dot movement inside the mouse shape
+let mouseHeight = 280;
+
+
+function mouseWheel(event) {
+  // if (state != TITLE) {
+  //   // Prevent scrolling
+  //   event.preventDefault();
+  // } else {
+  //   // If allowed, update the scroll amount
+  //   mouseScrollAmount = window.scrollY;
+  // }
+	mouseScrollAmount = window.scrollY;
+	scrollDirection = event.delta > 0 ? 1 : -1;
+}
+
+// Apply CSS styles
+function addGlobalStyles() {
+  let style = createElement('style', `
+    h1, p, span, div {
+      font-family: 'Avenir'; /* Change to your desired font */
+    }
+  `);
+  style.parent(document.head);
+}
+
+function setup() {
+  canvas = createCanvas(1600, 7000);
+	addGlobalStyles();
+	// canvas.style('position', 'fixed');
+	canvas.style('z-index', '-9999');
+	
+	
+	// Define the range of movement for the dot inside the mouse icon
+  mouseYMin = mouseHeight - 15; // Start point for the dot
+  mouseYMax = mouseHeight + 10; // End point for the dot
+  dotY = mouseYMin;            // Initial position for the dot
+	
+	
+	firstSection = createElement('p', 'In June 2022, Roe v. Wade was overturned, eliminating the federal right to abortion. The effects of this decision are still unfolding, but one metric we can already examine is the distance women must travel to their nearest abortion facility.');
+	firstSection.position(100, windowHeight/3);
+	firstSection.style("color", "white");
+	firstSection.style('font-size', '45px');
+	firstSection.style('width', '1400px'); // Set the maximum width for wrapping
+	// firstSection.hide();
+  
+	// secondSection = createElement('h1', 'The effects of this decision are still unfolding, but one metric we can already examine is the distance women must travel to their nearest abortion facility');
+	// secondSection.position(100, 900);
+	// secondSection.style("color", "white");
+	// secondSection.style('font-size', '50px');
+	// secondSection.style('width', '1400px'); // Set the maximum width for wrapping
+	// secondSection.hide();
+	
+	
+	thirdSection = createElement('p', 'In more liberal states like California, the overturning had little impact on the distance most women had to travel.');
+	thirdSection.position(100, 2000);
+	thirdSection.style("color", "white");
+	thirdSection.style('font-size', '45px');
+	thirdSection.style('width', '1400px'); // Set the maximum width for wrapping
+	
+	
+	fourthSection = createElement('p', "However, in states with less protection like Texas, the effect of overturning Roe v. Wade has been significant and undeniable, with more than a 3.5x increase in just the past 2 years.");
+	fourthSection.position(100, 3000);
+	fourthSection.style("color", "white");
+	fourthSection.style('font-size', '45px');
+	fourthSection.style('width', '1400px'); // Set the maximum width for wrapping
+	
+	
+	fifthSection = createElement('p', "Use the following data visualization to explore how other states have been impacted by the overturning of Roe v. Wade and how distances have evolved over time.");
+	fifthSection.position(100, 5600);
+	fifthSection.style("color", "white");
+	fifthSection.style('font-size', '45px');
+	fifthSection.style('width', '1400px'); // Set the maximum width for wrapping
+	
+	// dmSans = loadFont("DMSans-VariableFont_opsz,wght.ttf");
+	// textFont(dmSans);
+	textFont("Avenir");
+  // Create the slider for controlling the radius index
+	colorScale = new ColorScale([color('rgb(39,183,71)'), color('rgb(244,134,212)')], 
+																		 [0, 1]);
+	
+	
+	for (let row of stateData.rows) {
+		let state = row.get("origin_state");
+		let distance = parseFloat(row.get("distance_origintodest"));
+		if (!stateDict[state]) {
+			// If the key does not exist, create it with an array containing the value
+			stateDict[state] = [distance];
+		} else {
+			// If the key exists, push the value to the existing array
+			stateDict[state].push(distance);
+		}
+
+		if (distance < scaleMin) {
+			scaleMin = distance;
+		}
+
+		if (distance > scaleMax) {
+			scaleMax = distance;
+		}
+	}
+	
+}
+
+let dotSpacing = 10;  // Space between each dot
+let progress = 0;
+
+let progressCaOne = 0;
+let progressCaTwo = 0;
+
+let progressTxOne = 0;
+let progressTxTwo = 0;
+let maxDots = 15;     // Total number of dots to reach the circumference
+// Function to draw the animated dotted line
+function drawDottedLine(x, y, radius, length, noFirst = false) {
+  let angle = PI / 4;  // Angle of the line, adjust as needed
+  let currentLength = 0;
+  
+  while (currentLength < length) {
+    let dotX = x + cos(angle) * currentLength;
+    let dotY = y + sin(angle) * currentLength;
+    
+    // Draw the dot
+    fill("white");
+    noStroke();		
+		if (!noFirst || currentLength != 0) {
+			ellipse(dotX, dotY, 5, 5);
+		}
+    
+    
+    // Move to the next dot position along the line
+    currentLength += dotSpacing;
+  }
+}
+
+// Function to draw a simple mouse icon with a scrolling dot inside
+function drawMouseIcon(x, y) {
+  // Draw the mouse outline
+  stroke(255);
+  noFill();
+  strokeWeight(2);
+  rectMode(CENTER);
+  rect(x, y, 40, 60, 20); // Rounded rectangle to represent the mouse
+
+  // Calculate the alpha (opacity) based on the dot's position
+  let alpha = map(dotY, mouseYMin, mouseYMax, 255, 50); // Fades as it moves downward
+
+  // Draw the dot with decreasing opacity
+  fill(255, 255, 255, alpha);
+  noStroke();
+  ellipse(x, dotY, 8, 8); // The dot moves downwards and fades inside the mouse
+}
+
+function draw() {
+	if (state == TITLE) {
+		// background(mouseScrollAmount, 100, 220);
+		background("black");
+		// resize
+		
+		push();
+		drawMouseIcon(1500, mouseHeight);
+		pop();
+		
+		textAlign(CENTER, CENTER);
+		
+			// Update the dot position for the downward scrolling effect
+		dotY += 0.4;
+		if (dotY > mouseYMax) {
+			dotY = mouseYMin; // Reset to the top once it reaches the bottom
+		}
+		
+		
+		textAlign(CENTER, CENTER);
+		textSize(45);
+		fill("white");
+		text("We represent each state in the U.S. as a circle", 800, 1100);
+		
+		fill(100, 100, 100, 200);
+		ellipse(800, 1300, 300, 300);
+		drawDottedLine(800, 1300, 300, progress);
+		
+		// if (progress < maxDots * dotSpacing) {
+		// 	progress += 1;  // Increase speed of the animation by adjusting this value
+		// } 
+		
+		// console.log("mouseY: ", mouseY);
+		progress = map(mouseScrollAmount, 600, 900, 0, maxDots * dotSpacing);
+  	progress = constrain(progress, 0, maxDots * dotSpacing);
+		
+		fill("white");
+		text("and the average distance in that state by the radius and color.", 800, 1500);
+		// text("and the average distance in that state by the radius and color.", 800, 1500);
+		drawScale(colorScale, width/2 - 500, 1600, 1000);
+
+		textAlign(CENTER, CENTER)
+		textSize(22);
+		text("Average Distance to Nearest Abortion Facility (miles)", width/2, 1670);
+		
+		
+
+		let t = map(30, scaleMin, scaleMax, 0, 1);
+		let circleColor = colorScale.getColor(t);
+		
+		// let currColor = colorScale.getColor(0.2);
+		// currColor.setAlpha(map(mouseScrollAmount, 400, 700, 0, 200));
+		fill(circleColor);
+		
+		
+		let y = 2450;
+		let radius = 100;
+		ellipse(width/2, y, radius, radius);
+		
+		progressCaOne = map(mouseScrollAmount, 1900, 2200, 0, 5 * dotSpacing);
+		progressCaOne = constrain(progressCaOne, 0, 5 * dotSpacing);
+		drawDottedLine(width/2, y, radius, progressCaOne, true);
+		
+		
+		// textStyle(CENTER);
+		
+		
+		fill("white");
+		textSize(45);
+		text("During Roe v. Wade", width/2, y - radius - 30);
+		textSize(22);
+		text("2009 - 2022", width/2, y - radius + 10);
+		textStyle(BOLD);
+		text("CA", width/2 + 2, y + 1);
+		textStyle(NORMAL);
+		
+		// if (mouseScrollAmount > 1900) {
+		textSize(22);
+		text("30 miles", width/2, y + radius - 30);
+		// }
+		
+		
+		y = 2800;
+		
+		fill(circleColor);
+		ellipse(width/2, y, 105, 105);
+		fill("white")
+		
+		progressCaTwo = map(mouseScrollAmount, 2000, 2300, 0, 5 * dotSpacing);
+		progressCaTwo = constrain(progressCaTwo, 0, 5 * dotSpacing);
+		drawDottedLine(width/2, y, 100, progressCaTwo, true);
+		
+		textSize(45);
+		text("Post Roe v. Wade", width/2, y - 130);
+		textSize(22);
+		text("2022 - Present", width/2, y - 90);
+		
+		textSize(22);
+		fill("white")
+		textStyle(BOLD);
+		text("CA", width/2 + 2, y + 1);
+		textStyle(NORMAL);
+		
+	
+		textSize(22);
+		text("31 miles", width/2, y + 80);
+		
+		
+		y = 3600
+		radius = 370;
+		
+		
+		t = map(111, scaleMin, scaleMax, 0, 1);
+		circleColor = colorScale.getColor(t);
+		
+		fill(circleColor);
+		ellipse(width/2, y, 370, 370);
+		
+		progressTxOne = map(mouseScrollAmount, 2900, 3300, 0, 19 * dotSpacing);
+		progressTxOne = constrain(progressTxOne, 0, 19 * dotSpacing);
+		drawDottedLine(width/2, y, radius, progressTxOne, true);
+		
+		
+		fill("white");
+		textSize(45);
+		text("During Roe v. Wade", width/2, y - 250);
+		textSize(22);
+		text("2009 - 2022", width/2, y - 210);
+		
+		textStyle(BOLD);
+		text("TX", width/2 + 2, y + 1);
+		textStyle(NORMAL);
+	
+		textSize(22);
+		text("111 miles", width/2, y + 210);
+		
+		
+		y = 4700
+		radius = 1306;
+		t = map(392, scaleMin, scaleMax, 0, 1);
+		circleColor = colorScale.getColor(t);
+		
+		fill(circleColor);
+		ellipse(width/2, y, radius, radius);
+		
+		progressTxTwo = map(mouseScrollAmount, 4000, 4500, 0, 66 * dotSpacing);
+		progressTxTwo = constrain(progressTxTwo, 0, 66 * dotSpacing);
+		drawDottedLine(width/2, y, radius, progressTxTwo, true);
+		
+		
+		fill("white");
+		textSize(45);
+		text("Post Roe v. Wade", width/2, y - 720);
+		textSize(22);
+		text("2022 - Present", width/2, y - 680);
+		
+		textStyle(BOLD);
+		text("TX", width/2 + 2, y + 1);
+		textStyle(NORMAL);
+	
+		textSize(22);
+		text("392 miles", width/2, y + 700);
+		
+		
+		
+		
+		// t = map(392, scaleMin, scaleMax, 0, 1);
+		// circleColor = colorScale.getColor(t);
+		// fill(circleColor);
+		// ellipse(width/2, 4000, 1300, 1300);
+		
+		
+		
+		
+		// textSize(45);
+		// text("Post Roe v. Wade", width/2, y - 700);
+		// textSize(22);
+		// text("2022 - Present", width/2, y - 660);
+		
+		// fill("white");
+		
+		if (mouseScrollAmount > 5500) {
+			resizeCanvas(1600, 800);
+
+			firstSection.hide();
+			// secondSection.hide();
+			thirdSection.hide();
+			fourthSection.hide();
+			fifthSection.hide();
+			
+			createReplayButton();
+			slider = new Slider(width/2 - 15, height - 60, 600, 0, 15, 13); // Position, width, min, max, initial value
+	
+
+			for (let row of statePos.rows) {
+				let state = row.get("State");
+				let stateRow = parseInt(row.get("Row"));
+				let stateCol = parseInt(row.get("Column"));
+				posDict[state] = [stateRow, stateCol];
+			}
+
+
+			let index = 0;
+			
+// 			for (let row of stateData.rows) {
+// 				let state = row.get("origin_state");
+// 				let distance = parseFloat(row.get("distance_origintodest"));
+// 				if (!stateDict[state]) {
+// 					// If the key does not exist, create it with an array containing the value
+// 					stateDict[state] = [distance];
+// 				} else {
+// 					// If the key exists, push the value to the existing array
+// 					stateDict[state].push(distance);
+// 				}
+
+// 				if (distance < scaleMin) {
+// 					scaleMin = distance;
+// 				}
+
+// 				if (distance > scaleMax) {
+// 					scaleMax = distance;
+// 				}
+// 			}
+			
+			
+			for (let key in stateDict) {
+				let x = (posDict[key][1] + 1) * (1400 / (columns + 1)) + 100;
+				let y = (posDict[key][0] + 1) * ((height - 50) / (rows + 1));
+				let currRing = new GrowingRing(x, y, stateDict[key], key);
+				if (key == "TX") {
+					selectedRing = currRing;
+				}
+				rings.push(currRing);
+				// rings.push(new GrowingRing(x, y, stateDict[key], key));
+
+				index++;
+			}
+			
+			startTime = millis();
+			
+			
+			state = SPECIFIC;
+		}
+		
+	} else {
+		
+		// createCanvas(1600, 800);
+		background("black");
+		
+		// if ()
+		// console.log("scrollDirection: ", scrollDirection);
+		if (scrollDirection === -1) {
+			state = TITLE; // Return to TITLE state on upward scroll
+			
+			resizeCanvas(1600, 7000);
+			
+			firstSection.show();
+			// secondSection.hide();
+			thirdSection.show();
+			fourthSection.show();
+			fifthSection.show();
+			
+			// Set the mouse scroll position to a specific y position
+			targetScrollY = 5400; // Change this value to the desired y position
+			window.scrollTo(0, targetScrollY);
+		}
+		
+		backButton.draw();
+		slider.display();
+
+		// fill(255, 255, 255, 100);
+		// ellipse(100, 100, 150, 150);
+		// image(replay, 50, 50, 100, 100);
+
+
+
+		fill("white");
+		textSize(75);
+		textAlign(LEFT, CENTER);
+		text(selectedRingInfo, 50, 50);
+		// text("Distance to Nearest Abortion Facility", width/2, 50);
+		textStyle(BOLD);
+		text("BRIDGING THE GAP", 190, 100);
+
+		fill("rgb(39,183,71)");
+		text("G", 749.5, 100);
+		// fill("white")
+		// text("A", width/2 + 160, 50);
+		fill("rgb(244,134,212)")
+		text("P", 862, 100);
+		textStyle(NORMAL);
+		textSize(20);
+		fill("white")
+		text("Average Distance to Abortion Facility", 190 + 4, 140);
+
+		fill("white");
+
+		textAlign(CENTER, CENTER);
+		textSize(30);
+		// text(`Year: ${slider.value() + 2009}`, width-510, height - 70);
+		textStyle(BOLD);
+		text(`Year: ${slider.value + 2009}`, 860, height - 90);
+		textStyle(NORMAL);
+
+		let y = height - 300
+		let x = 1150;
+		drawScale(colorScale, x, y, 260);
+		
+		textAlign(CENTER, BASELINE);
+	// text("Average Distance to Nearest Abortion Facility (miles)", x + (w/2), y + 25);
+		text("Average Distance to", x + (260/2), y + 55);
+		text("Nearest Abortion Facility (miles)", x + (260/2), y + 75);
+
+		if (slider.value == 13) {
+			textSize(30);
+			textAlign(CENTER, CENTER);
+			let colorText = color("rgb(244,134,212)");
+			// colorText.setAlpha(200);
+			fill(colorText);
+			textStyle(BOLD);
+			text("Roe v. Wade Overturned", 1130, height - 90);
+			textStyle(NORMAL);
+		}
+
+		if (state == ANIMATE) {
+			let elapsedTime = millis() - startTime;
+			
+			if (elapsedTime >= transitionTime) {
+				startTime = millis(); // Reset the start time for the next transition
+				slider.value = slider.value + 1;
+			}
+
+			if (slider.value == 15) {
+				state = SPECIFIC;
+			}
+		}
+	
+		for (let ring of rings) {
+			let extraRadius = 0;
+			if (ring.isMouseOver()) {
+				extraRadius = 10;
+			}
+			ring.update(slider.value); // Pass the current slider value to update
+			ring.display(extraRadius);
+			
+			// if (ring.isMouseOver() && mouseIsPressed) {
+			// 	selectedRing = ring; // Set the clicked ring as the selected one
+			// }
+		}
+
+		for (let ring of rings) {
+			ring.showText();
+		}
+		for (let ring of rings) {
+			if (ring.isMouseOver()) {
+				ring.displayPopup();
+			}
+		}
+	}
+  
+	
+}
+
+function createReplayButton() {
+	let buttonRadius = 30;
+  backButton = {
+    x: 1370,
+    y: 710,
+    width: buttonRadius,
+    height: buttonRadius,
+    
+    draw: function() {
+      push();
+		
+      // Button shape
+			// noStroke();
+			let radius = 30;
+			if (this.isMouseOver()) {
+				fill(180, 180, 180, 200);
+				radius = 35;
+			} else {
+				fill(180, 180, 180, 255);
+			}
+			
+			
+			// fill(255, 255, 255, 100);
+			ellipse(this.x, this.y, radius, radius);
+			image(replay, this.x-10, this.y-10, 20, 20);
+			
+      pop();
+    },
+    
+    isMouseOver: function() {
+      return mouseX > this.x - this.width && mouseX < this.x + this.width &&
+             mouseY > this.y - this.height/2 && mouseY < this.y + this.height/2;
+    }
+  };
+}
+
+
+// Define the GrowingRing class
+class GrowingRing {
+  constructor(x, y, radii, state) {
+    this.x = x;
+    this.y = y;
+    this.state = state;
+    this.radii = radii;
+    this.currentRadius = radii[0];
+    this.startTime = millis(); // Initialize the start time for each ring
+		this.selected = false;
+  }
+
+  update(sliderIndex) {
+    // Calculate elapsed time since the transition started
+    let elapsedTime = millis() - this.startTime;
+
+    // Lerp based on both the cycling and the slider
+    let targetRadius = this.radii[sliderIndex]; // Get radius based on slider value
+    this.currentRadius = lerp(this.currentRadius, targetRadius, 0.1); // Smoothly interpolate towards the target
+  }
+
+  display(extraRadius) {
+		let t = map(this.currentRadius, scaleMin, scaleMax, 0, 1);
+		let circleColor = colorScale.getColor(t);
+		circleColor.setAlpha(150);
+		// fill(255, 255, 255, 100);
+		fill(circleColor);
+    let radius = this.currentRadius / 1.8;
+    if (radius < 22) {
+      radius = 22;
+    }
+		// radius += extraRadius;
+		stroke(255, 255, 255, 100);
+		strokeWeight(1);
+    ellipse(this.x, this.y, radius);
+		
+		strokeWeight(5);
+		stroke("white");
+		noFill();
+		if (extraRadius) {
+			ellipse(this.x, this.y, radius + 5);
+		}
+    
+		// noStroke();
+		// textAlign(CENTER, CENTER);
+		// fill(255);
+		// textSize(10);
+		// textStyle(BOLD);
+		// text(this.state, this.x, this.y);
+		// textStyle(NORMAL);
+  }
+	
+	showText() {
+		noStroke();
+		textAlign(CENTER, CENTER);
+		fill(255);
+		textSize(10);
+		textStyle(BOLD);
+		text(this.state, this.x, this.y);
+		textStyle(NORMAL);
+	}
+	
+	isMouseOver() {
+    let radius = 40; // Adjust radius for hit detection
+    return dist(mouseX, mouseY, this.x, this.y) < radius;
+  }
+	
+	displayPopup() {
+		let t = map(this.currentRadius, scaleMin, scaleMax, 0, 1);
+		let textColor = colorScale.getColor(t);
+		textColor.setAlpha(220);
+		// fill(100, 100, 100, 200);
+		fill(textColor)
+		// rect(width - 355, height - 325, 250, 100, 20);
+		let xVal = this.x + 10;
+		let yVal = this.y - 100;
+		// let stateList = ["VT", "MA", "CT", "MD", "ME", "NH", "RI", "DE"]
+		// // if (stateList.includes(this.state)) {
+		// // 	xVal = this.x - 260;
+		// // 	if (this.state == "ME") {
+		// // 		yVal = this.y;
+		// // 	}
+		// // }
+		
+	
+		rect(xVal, yVal, 210, 100, 20);
+    let radiusValue = this.radii[slider.value]; // Get current radius based on the slider
+    fill("white");
+    textSize(20);
+    textAlign(LEFT, CENTER);
+		textStyle(BOLD);
+    text(`${abbDict[this.state].toUpperCase()}`, xVal + 15, yVal + 25);
+		textStyle(NORMAL);
+		textSize(12);
+		text(`Average Distance/Radius`, xVal + 15, yVal + 45);
+		
+		textSize(20);
+		textStyle(BOLD);
+		
+		// fill(textColor);
+    text(`${round(radiusValue)} mile(s)`, xVal + 15, yVal + 75);
+		textStyle(NORMAL);
+	}
+	
+}
+
+function mousePressed() {
+  if (backButton.isMouseOver()) {
+    state = ANIMATE;
+		slider.value = 0;
+		startTime = millis();
+  }
+
+	slider.handleMousePressed();
+	
+}
+
+// Represents a numeric color scale.
+class ColorScale {
+	
+	// In this constructor, the "colors" and "numbers" parameters
+	// need to be arrays of the same length.
+	// They should hold (can you guess?) colors and numbers.
+	// "numbers" should be sorted in ascending order.
+	constructor(colors, numbers) {
+		this.colors = colors;
+		this.numbers = numbers;
+	}
+	
+	// Minimum numeric value for scale.
+	getMin() {
+		return this.numbers[0];
+	}
+	
+	// Maximum numeric value for scale.
+	getMax() {
+		return this.numbers[this.numbers.length - 1];
+	}
+	
+	// Return the appropriate color for the given number
+	getColor(x) {
+		let numColors = this.numbers.length;
+		// If the number is off the ends of the scale,
+		// return the appropriate extreme value.
+		if (x <= this.getMin()) {
+			return this.colors[0];
+		}
+		if (x >= this.getMax()) {
+			return this.colors[numColors - 1];
+		}
+		
+		// Otherwise go through numbers array and find which segment we should use;
+		// return an appropriate color via linear interpolation.
+		for (let i = 1; i < numColors; i++) {
+			if (x <= this.numbers[i]) {
+				let t = (x - this.numbers[i - 1]) / (this.numbers[i] - this.numbers[i - 1]);
+				return lerpColor(this.colors[i - 1], this.colors[i], t);
+			}
+		}
+	}
+}
+
+// Convenience function to draw a color scale object
+// at a given point on the screen.
+// One design option (not taken here) would be to make this
+// function a method of the ColorScale class--but in that case
+// you'd probably want to make it a little more general.
+function drawScale(scale, x, y, w) {
+	push();
+	// Draw a color spectrum, one line for each available pixel.
+	for (let i = 0; i < w; i++) {
+		// Use linear interpolation between min and max of scale
+		// to figure out what value to draw at this part of spectrum
+		let t = lerp(scale.getMin(), scale.getMax(), i / (w + 1));
+		strokeWeight(2);
+		stroke(scale.getColor(t));
+		line(x + i, y, x + i, y + 40);
+	}
+	pop();
+	
+	// Label min and max values of color scale.
+	fill(255);
+	noStroke();
+	textSize(16);
+	textAlign(LEFT, BASELINE);
+	text(round(scaleMin), x, y - 5);
+	textAlign(RIGHT, BASELINE);
+	text(round(scaleMax), x + w, y - 5);
+	// textAlign(CENTER, BASELINE);
+	// // text("Average Distance to Nearest Abortion Facility (miles)", x + (w/2), y + 25);
+	// text("Average Distance to", x + (w/2), y + 55);
+	// text("Nearest Abortion Facility (miles)", x + (w/2), y + 75);
+}
+
+
+// Custom Slider class
+class Slider {
+  constructor(x, y, w, min, max, startValue) {
+    this.x = x;                   // Slider x position
+    this.y = y;                   // Slider y position
+    this.width = w;               // Slider width
+    this.minVal = min;            // Minimum value of the slider
+    this.maxVal = max;            // Maximum value of the slider
+    this.value = startValue;      // Current slider value
+    this.thumbRadius = 10;        // Radius of the thumb
+    this.dragging = false;        // Whether the slider thumb is being dragged
+    this.numSteps = max - min + 1; // Total steps for discrete values
+  }
+
+  // Display the slider track and thumb
+  display() {
+    // Draw the track
+    stroke(180);
+    strokeWeight(10);
+    line(this.x, this.y, this.x + this.width, this.y);
+
+    // Draw the thumb
+    let thumbX = this.getThumbX();
+		
+		let isHovering = dist(mouseX, mouseY, thumbX, this.y) < this.thumbRadius;
+    
+		// Draw the thumb with a white outline if hovering
+    noStroke();
+    if (isHovering || this.dragging) {
+      stroke(255);               // White outline
+      strokeWeight(4);           // Outline thickness
+    }
+    fill("rgb(233, 137, 205)");
+    ellipse(thumbX, this.y, this.thumbRadius * 2);
+    noStroke();
+
+    // // Display the slider value above the thumb
+    // noStroke();
+    // fill(0);
+    // textAlign(CENTER);
+    // text("Value: " + this.value, thumbX, this.y - 20);
+  }
+
+  // Get the x position of the thumb based on the current value
+  getThumbX() {
+    return map(this.value, this.minVal, this.maxVal, this.x, this.x + this.width);
+  }
+
+  // Handle mouse press to check if the thumb is clicked
+  handleMousePressed() {
+    let thumbX = this.getThumbX();
+    if (dist(mouseX, mouseY, thumbX, this.y) < this.thumbRadius) {
+      this.dragging = true;
+			state = SPECIFIC;
+    }
+  }
+
+  // Handle mouse release to stop dragging
+  handleMouseReleased() {
+    this.dragging = false;
+  }
+
+  // Handle mouse drag to update the slider value
+  handleMouseDragged() {
+    if (this.dragging) {
+      // Constrain mouseX within the slider track limits
+      let constrainedX = constrain(mouseX, this.x, this.x + this.width);
+
+      // Map the mouse position to the nearest step
+      let stepSize = this.width / (this.numSteps - 1);
+      let nearestStep = round((constrainedX - this.x) / stepSize);
+      this.value = constrain(nearestStep, this.minVal, this.maxVal);
+    }
+  }
+}
+
+function mouseReleased() {
+	slider.handleMouseReleased();
+}
+
+function mouseDragged() {
+	slider.handleMouseDragged();
+}
+
