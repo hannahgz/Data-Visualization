@@ -1,0 +1,1328 @@
+/*
+Works Cited:
+
+- Dataset: https://www.kaggle.com/datasets/johnbandy/new-york-times-headlines
+	- Referenced the example notebook on how to generate graphs, but changed graph generation significantly to subset by section and year/month
+- Colab Notebook with data analysis: https://colab.research.google.com/drive/1o761Cfz9aU-HL_Z7mnFakohhQap9OXOe?usp=sharing
+	- ChatGPT: used to generate most data processing methods
+- https://en.wikipedia.org/wiki/The_New_York_Times#:~:text=As%20one%20of%20the%20longest,States%2C%20with%20296%2C330%20print%20subscribers.
+	- used for basic information
+- ChatGPT used for blog descriptions, cross-referenced with archival NYT websites
+	- e.g. https://archive.nytimes.com/thelede.blogs.nytimes.com/2010/08/03/video-shows-rough-treatment-of-immigrant-mothers-by-french-police/
+- ChatGPT used for drawGrid and drawGrid related methods, fadeInText
+
+Components:
+- Reused scrollytelling components from my own work (Abortion w/ Emotion Added (mouse scroll icon, scrolling format))
+- Slider bar from original abortion piece
+	- used ChatGPT to allow user to use arrow keys to toggle in the slider
+- Reused wrapText method from multiple previous pieces
+- Fonts: https://www.fontsmarket.com/font-details/cheltenham-bold-headline (and other Cheletham fonts)
+- Treemap:
+	- Inspiration from Zach's Who's Emotional Piece
+	- Inspiration from Wattenberg's Treemap examples in class
+	- ChatGPT used to make barebones treemap code, adapted heavily
+	- Inspiration from https://editor.p5js.org/hspencer/sketches/i_DNoPL3I
+
+Bank Earnings Screenshot
+- https://timesmachine.nytimes.com/timesmachine/1988/03/14/issue.html
+
+Candidate Endorsements
+- https://www.nytimes.com/interactive/2016/09/23/opinion/presidential-endorsement-timeline.html
+	- AlGore Screenshot also from this site
+- https://en.wikipedia.org/wiki/List_of_United_States_presidential_election_endorsements_made_by_The_New_York_Times#cite_note-18
+	- used ChatGPT to turn the information here into a JSON, cross-checked with information from the NYT official endorsement article
+
+*/ 
+
+// Thank you so much to Tina, Olivia, Martin, and Fernanda for an amazing class! I've learned so much about data viz + graphic design :)
+
+let blogDescriptions = 
+{
+  "dealbook": "A blog about finance, Wall Street, and mergers and acquisitions.",
+  "artsbeat": "Coverage of arts and culture, including theater, music, and visual arts.",
+  "cityroom": "Focused on New York City news, events, and urban life.",
+  "thecaucus": "A blog about politics, elections, and national policies.",
+  "themoment": "Explored fashion, design, and cultural trends.",
+  "maplewood": "Hyperlocal blog covering the Maplewood community.",
+  "thelede": "Breaking news and analysis of major global and national stories.",
+  "fort-greene": "Community blog about the Fort Greene neighborhood in Brooklyn.",
+  "greeninc": "Focused on environmental news, green technology, and sustainability.",
+  "bats": "A blog dedicated to baseball, including news and analysis.",
+  "mediadecoder": "Media industry news and commentary.",
+  "gadgetwise": "Coverage of gadgets, tech trends, and consumer electronics.",
+  "wheels": "A blog about cars, the auto industry, and driving culture.",
+  "economix": "Explaining the economy and its impact on daily life.",
+  "bits": "Technology and innovation news, particularly in Silicon Valley.",
+  "laughlines": "Humor-focused blog with funny content and media.",
+  "freakonomics": "Economics blog exploring surprising insights and questions.",
+  "fifthdown": "Dedicated to football, particularly NFL news and analysis.",
+  "timestraveler": "A look back at archived stories from the New York Times.",
+  "well": "Focused on health, wellness, and medical topics.",
+  "slapshot": "A blog about hockey, including NHL coverage and analysis.",
+  "straightsets": "Coverage of tennis, including major tournaments and players.",
+  "intransit": "Travel tips and destination guides.",
+  "thequad": "College sports blog, especially football and basketball.",
+  "prescriptions": "Focused on health care policy and reform.",
+  "dinersjournal": "Coverage of food, dining, and restaurant culture.",
+  "krugman": "Economics commentary by Paul Krugman.",
+  "lens": "Photojournalism blog showcasing photography and visual storytelling.",
+  "goal": "Soccer blog covering leagues, teams, and players globally.",
+  "opinionator": "Opinion pieces and commentary from guest contributors.",
+  "parenting": "Advice and stories about raising children and family life.",
+  "schott": "Exploring trivia, oddities, and miscellanea.",
+  "globespotters": "Travel blog with a focus on global destinations.",
+  "bitten": "Food blog covering recipes, trends, and culture.",
+  "thechoice": "Blog about college admissions and education.",
+  "therail": "Coverage of horse racing news and events.",
+  "wordplay": "Blog about puzzles, especially crosswords.",
+  "dotearth": "Environmental and climate change issues blog.",
+  "papercuts": "Literary blog about books and publishing.",
+  "tmagazine": "Lifestyle and fashion blog tied to T Magazine.",
+	 "tierneylab": "Science and research blog exploring innovative ideas and experiments.",
+  "ideas": "A blog discussing big ideas, innovation, and intellectual topics.",
+  "boss": "Focused on small business and entrepreneurship.",
+  "roomfordebate": "Blog featuring debates on current issues with multiple viewpoints.",
+  "norris": "Personal finance and economics blog by Floyd Norris.",
+  "tvdecoder": "Coverage of television shows, trends, and industry news.",
+  "atwar": "Blog about war and conflict, with reporting from global hotspots.",
+  "topics": "General blog addressing trending topics and news themes.",
+  "kristof": "Blog by Nicholas Kristof, covering human rights and global issues.",
+  "carpetbagger": "Blog about the film industry, especially the Oscars.",
+  "formulaone": "Coverage of Formula One racing and motorsport news.",
+  "pogue": "Technology blog by David Pogue, reviewing gadgets and tech trends.",
+  "thepour": "Blog about wine, including reviews, trends, and culture.",
+  "newoldage": "Blog focused on aging, caregiving, and elder life issues.",
+  "realestateqa": "Real estate advice and market trends.",
+  "learning": "Coverage of education news, trends, and innovations.",
+  "happydays": "Reflections on the meaning of happiness in modern life.",
+  "runway": "Coverage of fashion shows, designers, and trends.",
+  "douthat": "Opinion blog by Ross Douthat on culture and politics.",
+  "consults": "Medical advice and discussions from health experts.",
+  "ethicist": "Advice column exploring ethical dilemmas.",
+  "baghdadbureau": "Reporting from Iraq, covering war and life in Baghdad.",
+  "frugaltraveler": "Tips and stories on budget-friendly travel.",
+  "executivesuite": "Coverage of business leadership and management.",
+  "firstlook": "Early reviews and previews of movies and media.",
+  "egan": "Blog by Timothy Egan on politics and the American West.",
+  "bayarea": "News and events from the San Francisco Bay Area.",
+  "judson": "Blog by Olivia Judson on evolutionary biology and science.",
+  "fish": "Blog by Stanley Fish on law, culture, and politics.",
+  "warner": "Culture blog exploring trends and media.",
+  "gambit": "Chess blog covering games, strategies, and players.",
+  "theconversation": "Interviews and discussions with notable figures.",
+  "offthedribble": "Basketball blog covering the NBA and college hoops.",
+  "raisingtheroof": "Blog about housing and urban development.",
+  "morris": "Blog by Errol Morris exploring philosophy and film.",
+  "proof": "Blog exploring the science and culture of alcohol.",
+  "travelqa": "Travel advice and questions answered.",
+  "100days": "Coverage of President Obama's first 100 days in office.",
+  "bucks": "Personal finance advice and strategies.",
+  "cavett": "Blog by Dick Cavett on entertainment and storytelling.",
+  "open": "Tennis blog covering major tournaments and news.",
+  "vancouver2010": "Coverage of the 2010 Winter Olympics in Vancouver.",
+  "themedium": "Exploring media trends and journalism.",
+  "publiceditor": "Blog by the Public Editor addressing NYT reader concerns.",
+  "homefires": "Blog by veterans reflecting on military service.",
+  "arieff": "Blog by Allison Arieff on design and architecture.",
+  "kalman": "Blog by Maira Kalman combining art and storytelling.",
+  "scher": "Art blog by Paula Scher on visual design.",
+  "niemann": "Art and humor blog by Christoph Niemann.",
+  "measureformeasure": "Blog about the craft of songwriting.",
+  "blow": "Opinion blog by Charles M. Blow on politics and culture.",
+  "thescore": "Sports blog covering major events and analysis.",
+  "theclimb": "Blog about climbing, adventure, and outdoor sports.",
+  "theboard": "General blog covering diverse topics and ideas."
+}
+
+let parentingArticles = [
+  "4 Ways to Help Your Anxious Kid",
+  "How Coronavirus Is Affecting Surrogacy, Foster Care and Adoption",
+  "Teaching Your Kids to Be Safe Online: A Hasty Primer",
+  "My Partner Works in an Amazon Warehouse. I’m Worried — and Proud.",
+  "What to Do if Your Day Care Is Still Open",
+  "Now’s a Good Time to Teach Your Kids to Play on Their Own",
+  "Single Parents Are Struggling, but Enduring, Through the Pandemic",
+  "Have You Been Separated from Your Family Because of Coronavirus?",
+  "How to Keep Kids Safe Online",
+  "Should You Breastfeed if You Have the Coronavirus?",
+  "Kids Won’t Stop Fighting? A Bouncer, a Therapist and a Referee Have Advice",
+  "Crying in Your Car Counts as Self-Care",
+  "My Church Is Closed, So I Built My Own",
+  "8 Ways to Set Boundaries Between Work and Kids",
+  "When Parents Get Sick, Who Cares for the Kids?",
+  "Should Young Children Wear Masks?",
+  "Quarantined With a Newborn, Alone",
+  "Is Quarantine Worse for an Only Child?",
+  "A Bouncer’s Advice for Breaking Up Sibling Fights",
+  "Agonizing Over Screen Time? Follow the Three C’s",
+  "‘I Just Want to Eat Her Up!’",
+  "The Truth About Tummy Time",
+  "What Should Baby Poop Look Like, Anyway?",
+  "How Often Should I Bathe My Baby?",
+  "Pregnancy Pains Got You Down? Read This",
+  "Move Over, Unicorns. Llamas Rule the Toy Business Now.",
+  "Bedtime Was Hard Enough. Then Came Quarantine.",
+  "How to Avoid Burnout When You Have Little Ones",
+  "Fighting Constantly After Baby? Read This",
+  "Is Your Child a Digital Addict? Here’s What You Can Do",
+  "An L.G.B.T.Q. Pregnancy, From D.I.Y. to I.V.F.",
+  "Black Women Are Hit Hardest by Fibroid Tumors",
+  "Why Is My Big Kid Acting Like a Toddler?",
+  "How to Stop Your Child From Tormenting Your Pet",
+  "Fighting Coronavirus Means I Haven’t Seen My Kids for a Month",
+  "Separated From Their Families, Parents Quarantine Apart",
+  "Get the NYT Parenting Newsletter",
+  "Desperately Seeking a Black Sperm Donor",
+  "Swimming in the Alphabet Soup of Assisted Fertility",
+  "A Ticking Clock and Anxiety on the Way to Motherhood",
+  "We Tweeted Our Pregnancy the Day We Found Out",
+  "How Men’s Bodies Change When They Become Fathers",
+  "Wait, I Thought You Had Outgrown This",
+  "The Truth About Pregnancy Over 40",
+  "Overcoming Motherhood Imposter Syndrome",
+  "We Need to Talk About ‘The Giving Tree’",
+  "A Simple Trick to Reset Your Post-Baby Budget",
+  "How to Reconnect With Your Partner After Having Kids",
+  "Even Without a Home, We Always Had a Family Meal",
+];
+
+
+// Mouse Icon
+let mouseHeight = 210;
+let dotY;           // Y-position of the dot inside the mouse icon
+let mouseYMin, mouseYMax; // Limits for the dot movement inside the mouse shape
+
+let actualHeight;
+
+let nytFont;
+let romanFont;
+let headlineFont;
+let boldFont;
+let wrapTextSize = 25;
+
+let data = []
+let nytAllData;
+
+let targetValues = [];
+let interpolationSpeed = 0.1;
+let treemapWidth = 800;
+let treemapHeight = 550;
+
+let treemapCornerX = 650;
+// let counter = 360;
+let counter = 0;
+let dates = [];
+let leftMaxWidth = 550, leftStartX = 20, leftStartY;
+let SPECIFIC = 1;
+let state = SPECIFIC;
+
+let draggingSlider = false;
+
+// Scroll Variables
+let scrollY = 0; // Tracks how far we've scrolled
+// let maxScroll = 40000;
+let maxScroll = 30000;
+let draggingScrollbar = false;
+let scrollbarYPos = 0; // The vertical position of the scrollbar handle
+let scrollbarHeight = 50; // Proportional height of the scrollbar
+let scrollbarX = treemapCornerX - 50;
+let reportsEarningData;
+let reportsEarningPic;
+
+let startEarningsX = 700;
+let startEarningsY = 320;
+let positions = []
+let startTime;
+let duration = 5000; // 10 seconds for the animation
+
+let textBlock = 0;
+let textSpacing = 700;
+let textStart = 1100;
+
+
+// Blog Variables
+let blogData;
+let blogMargin = 130; // Margin for labels
+let blogBarHeight = 20; // Height of each bar
+let blogBarSpacing = 5; // Space between bars
+let blogMaxBarWidth;
+let hoverDescription = "";
+
+// Election Variables
+let algorePic;
+let algorePicRatio = 3;
+let algorePicWidth;
+let algorePicHeight;
+let rectWidth = 90;
+let rectHeight = 30;
+let endorse;
+
+
+function preload() {
+  // Load the font in preload() to ensure it's available before setup
+  nytFont = loadFont('Chomsky.otf'); 
+	boldFont = loadFont("CheltenhamBT-BoldHeadline.otf")
+	// romanFont = loadFont("times new roman.ttf");
+	romanFont = loadFont("Cheltenham Regular.ttf");
+	nytAllData = loadJSON("nyt_section_percentage_real.json");
+	dates = loadJSON("formatted_dates.json")
+	headlineFont = loadFont("Cheltenham-Normal Bold Italic.ttf")
+	
+	reportsEarningData = loadJSON("reports_earning_50 (1).json");
+	reportsEarningPic = loadImage("reports_earning_example.png")
+	blogData = loadJSON("blogs_url_counts.json");
+	
+	algorePic = loadImage("nyt_algore.png");
+	endorse = loadJSON("cs73_endorsement.json")
+}
+
+let sliderWidth = 1400;
+let sliderHeight = 30;
+function setup() {
+  createCanvas(1500, 750);
+	if (Array.isArray(endorse) === false) {
+    endorse = Object.values(endorse);
+  }
+
+	// mouse scroll icon 
+	mouseYMin = mouseHeight - 15; // Start point for the dot
+  mouseYMax = mouseHeight + 10; // End point for the dot
+  dotY = mouseYMin;            // Initial position for the dot
+	
+	// Blog setup
+	
+	blogMaxBarWidth = width/2.5 - blogMargin - 20; // Leave space for padding on the right
+	
+	actualHeight = height - 40;
+	leftStartY = height/2;
+  
+  // // Initialize target values
+  // updateTargetValues();
+  
+  // Set an interval to update target values every 5 seconds
+  // setInterval(updateTargetValues, 100);
+  
+	textFont(romanFont);
+	
+	strokeWeight(2);
+	
+	for (let currKey of Object.keys(nytAllData)) {
+    // Use currKey here
+		data.push({name: currKey, value: nytAllData[currKey][counter+1], currentValue: nytAllData[currKey][counter]})
+	}
+	data.sort((a, b) => b.currentValue - a.currentValue);
+	// counter = counter + 1;
+	slider = new Slider((width - sliderWidth)/2, sliderHeight, sliderWidth, 0, 371, 0); // Position, width, min, max, initial value
+	// 372
+	
+	setupEarningsHeadlines();
+	
+	
+	// textStyle(BOLD);
+  // frameRate(60); // Increase frame rate for smoother animation
+	
+	algorePicWidth = algorePic.width/algorePicRatio;
+	algorePicHeight = algorePic.height/algorePicRatio;
+	
+	startTime = millis();
+}
+
+function draw() {
+  background("rgb(221, 220, 212)");
+
+	dotY += 0.4;
+	if (dotY > mouseYMax) {
+		dotY = mouseYMin; // Reset to the top once it reaches the bottom
+	}
+	
+
+  
+  let totalChange = 0;
+
+  // Interpolate current values towards target values
+  data.forEach((item, index) => {
+    let diff = item.value - item.currentValue;
+    item.currentValue += diff * interpolationSpeed;
+    totalChange += Math.abs(diff);
+  });
+	data.sort((a, b) => b.currentValue - a.currentValue);
+	
+	
+	drawEarningsHeadlines();
+	drawNytHeader();
+  let treemap = createTreemap(data, treemapCornerX, (height - treemapHeight)/2 + 60, treemapWidth, treemapHeight);
+  drawTreemap(treemap);
+
+  // If total change is very small, snap to exact values
+  if (totalChange < 0.1) {
+    data.forEach(item => item.currentValue = item.value);
+  }
+	push();
+	
+	// Update the length of the dotted line based on scrollY
+	translate(0, -scrollY); // Translate the view based on the scroll position
+	
+	drawMouseIcon(550, mouseHeight);
+	// wrapText("The New York Times is one of the longest running publications in the United States. It has the most online subscribers out of any publication and the second-most number of print subscribers. ", leftStartX, leftStartY, leftMaxWidth, 20);
+
+	// wrapTExt("")
+	noStroke();
+	fill("black");
+	// textSize(50);
+	wrapText("EVOLUTION OF NYT HEADLINES FROM 1990-2020", leftStartX, height/2 - 70, leftMaxWidth, text_size = 65, chosenFont = headlineFont);
+	textFont(romanFont);
+	
+	
+	textBlock = 0;
+	wrapText("The New York Times is one of the longest running publications in the U.S. It has the most online subscribers and the second-most number of print subscribers. ", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText("We examine the distribution of headline sections each month from 1990-2020, representing each section as a rectangular region, with area proportional to its percentage, as shown to the right: ", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`For example, the highlighted section shows the "Business Day" section, which cover topics like finance and economics. In ${dates[counter]}, headlines in this section accounted for ${round(nytAllData["Business Day"][counter] * 10) / 10}% of all headlines published.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText("1990-1999: BUSINESS AND BANKING", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, text_size = 55, chosenFont = headlineFont);
+	textBlock += 1
+	
+	wrapText(`In the 1990s, the "Business Day" section dominated. Here, we've selected 50 random headlines from the section.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1.8
+	
+	wrapText(`An average of 40% of all headlines in this section were earnings reports.`, leftStartX + 340, textStart + textBlock * textSpacing, leftMaxWidth - 320, wrapTextSize);
+	textBlock += 1
+	
+	
+	wrapText(`The rest covered a variety of diverse topics.`, leftStartX + 340, textStart + textBlock * textSpacing, leftMaxWidth - 320, wrapTextSize);
+	// textBlock += 4
+	textBlock += 1.3
+	
+	if (scrollY > 5300 && scrollY < 8000) {
+		let picRatio = 2.1;
+		let picWidth = reportsEarningPic.width/picRatio;
+		let picHeight = reportsEarningPic.height/picRatio;
+		// tint(255, 128);
+		image(reportsEarningPic, 20, textStart + textBlock * textSpacing, picWidth, picHeight);
+	} 
+	// else {
+	// 	textBlock += 2.5;
+	// }
+	
+	wrapText(`Reports earnings frequently came in the format shown here:`, leftStartX, textStart + textBlock * textSpacing - 100, leftMaxWidth, wrapTextSize);
+	textBlock += 1.5
+	wrapText(`This focus on bank earnings reflects the many technological advancements in the stock market at this time and the globalization of finance.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`It also demonstrates how the New York Times in the 1990s catered strongly to business professionals, one of the first instances that shows how the publication changes the types of articles it publishes depending on what would get the most interest.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText("2000-2007: EXAMINATION OF POLITICIZATION", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, text_size = 55, chosenFont = headlineFont);
+	textBlock += 1;
+	
+	// wrapText(`By the mid-1990s, headlines about New York started to overtake those about business.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	wrapText(`Next, we consider the "Opinion" section. Although every section of the NYT is subject to bias, "Opinion" articles are where writers have the most freedom in expression. For example, candidate endorsements all fall under the "Opinion" section.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`In 2000, the NYT endorsed Al Gore.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	image(algorePic, 20, textStart + textBlock * textSpacing + 40, algorePicWidth, algorePicHeight);
+	textBlock += 1
+	
+	wrapText(`In fact, despite some recent articles saying that the NYT has rarely endorsed presidential candidates, the NYT has indeed endorsed a candidate every year since 1860.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`For this reason, we'll consider some additional data on candidate endorsements that predates 1990. In the next visualization, we show which candidate the NYT has endorsed dating back to 1860, when the publication first endorsed Abraham Lincoln. `, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	
+	textBlock = 24.5;
+	wrapText("2008-2013: THE RISE AND FALL OF BLOGS", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, text_size = 55, chosenFont = headlineFont);
+	textBlock += 1;
+	
+	wrapText(`Beginning in 2008, blogs had a huge rise in popularity. This reflected the rapidly changing digital media landscape and how the NYT was trying to stay competitive by targeting specific groups of readers.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	// wrapText(`This reflected the rapidly changing digital media landscape and how the NYT was trying to stay competitive by targeting specific groups of readers.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	wrapText(`Below, we've categorized all blog headlines from 2009 into 94 different blog types. Hover over each of the bars to learn more:`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 3.7
+	
+	wrapText(`Despite the rapid rise, the fall of Blogs was also extremely quick. By 2012, most of the blogs had either been discontinued or absorbed into other sections:`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`The speed at which publications change often goes unnoticed. But in fact, they are constantly evolving and shifting.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText("2014-2018: NATIONALIZATION AND DIVERSIFICATION", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, text_size = 55, chosenFont = headlineFont);
+	textBlock += 1
+	
+	wrapText(`Now having come almost 25 years from 1990, we note some of the most prominent big-picture changes.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`The publication has moved away from writing articles about its namesake city New York. And instead has become more of a national, and even international presence.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`This demonstrates the NYT's increasing importance on the world stage and how it has become more well respected over time.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`The diversity in types of articles has also significantly grown, with the number of sections more than doubling over time.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	wrapText(`Here, we've selected some notable categories that have seen lots of growth since 1990. These categories reflect how the publication is becoming increasingly artistic, diverse, and catered towards the everyday reader with many different interests.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 1
+	
+	// textBlock += 0.5
+	
+	wrapText("2019-PRESENT: PANDEMIC AND THE FUTURE", leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, text_size = 55, chosenFont = headlineFont);
+	textBlock += 1
+	
+	wrapText(`Lastly, we consider the effects of world-altering events, like the pandemic, on the publication. We also investigate how the NYT serves as a litmus test for what readers find important.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);
+	textBlock += 0.8
+	
+	wrapText(`The most surprising trend was the increase in "Parenting" headlines, especially in 2020-04. The increases in this section dominated even those about "Health" or "Technology", showing how raising children in the pandemic was a major concern for readers. We show a snippet of those headlines here:`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);	
+	displayParentingArticles(textStart + textBlock * textSpacing + 200);
+	
+	textBlock += 1.45;
+	
+	wrapText(`Ultimately, the NYT is always evolving, just like its readers. Although it aims to be as factually accurate as possible, the NYT, like every other news organization, will always reflect certain biases, whether political or just catering to readers' interests. This is not an issue, but readers must be aware and critical of this when consuming media to be as informed as possible.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);	
+	textBlock += 0.5;
+	
+	wrapText(`In this piece, we've highlighted just a few interesting moments, but there is much more to explore. Please continue scrolling, dragging the slider, or using the arrow keys to discover more about the evolution of the NYT.`, leftStartX, textStart + textBlock * textSpacing, leftMaxWidth, wrapTextSize);	
+	
+	drawBlogBarplot(blogData);
+	
+	
+	pop();
+	
+	drawBarplotHover();
+	
+	textSize(20);
+	noStroke();
+	fill("black");
+	textAlign(LEFT, CENTER);
+	// text(`Scroll Y: ${scrollY}`, 10, height - 20);
+	
+	// drawScrollbar();
+	
+	if (scrollY > 12100 && scrollY < 17500) {
+		fadeInText("Each rectangle represents one year.", minScrolly=12100, maxScrolly=13000, leftStartX + 10, height-150)
+		
+		if (scrollY > 13000 && scrollY < 14500) {
+			fill(247, 170, 148); // Red
+			rect(leftStartX + 10, height-160, rectWidth, rectHeight);
+			fill(179, 201, 243); // Blue
+			rect(leftStartX + 10, height-120, rectWidth, rectHeight);
+			fill(242, 220, 111); // Yellow
+			rect(leftStartX + 10, height-80, rectWidth, rectHeight);
+			
+			if (scrollY >= 13700) {
+				push();
+				fill(180, 180, 180);
+				stroke(255);
+				strokeWeight(4)
+				rect(leftStartX + 10, height-40, rectWidth, rectHeight);
+				pop();
+			}
+			
+		}
+		
+		fadeInText("- endorsed a Republican", minScrolly=13000, maxScrolly=14500, leftStartX + 110, height-150);
+		fadeInText("- endorsed a Democrat", minScrolly=13000, maxScrolly=14500, leftStartX + 110, height-110);
+		fadeInText("- endorsed an Independent", minScrolly=13000, maxScrolly=14500, leftStartX + 110, height-70);
+		fadeInText("- year when endorsed candidate won", minScrolly=13700, maxScrolly=14500, leftStartX + 110, height-30);
+		
+		fadeInText("Hover over each year to learn more.", minScrolly=14500, maxScrolly=15000, leftStartX + 10, height-150);
+		fadeInText("As you explore, one clear trend emerges.", minScrolly=15000, maxScrolly=15500, leftStartX + 10, height-150);
+		fadeInText("Although initially the NYT endorsed a mix of Republican and Democratic candidates, since 1960, the publication has consistently only endorsed Democratic candidates.", minScrolly=15500, maxScrolly=16000, leftStartX + 10, height-150);
+		fadeInText("This reflects how the NYT has become increasingly left-leaning. While there is nothing inherently wrong with leaning a certain direction, oftentimes readers are unaware of this bias.", minScrolly=16000, maxScrolly=16500, leftStartX + 10, height-150);
+		fadeInText("This lack of awareness can cause warped perceptions of reality for readers, leading to echo chambers and increased political polarization.", minScrolly=16500, maxScrolly=17500, leftStartX + 10, height-150);
+		
+		drawGrid(endorse);
+	}
+	
+	
+	
+	slider.display();
+	
+	
+	// RETURN HERE
+	
+	if (slider.dragging) {
+		updateTargetValuesFromSlider(slider.value);
+		scrollY = map(slider.value, 0, 371, 0, maxScroll);
+	} else {
+		let testValue = round(map(scrollY, 0, maxScroll, 0, 371));
+		slider.value = testValue;
+		updateTargetValuesFromSlider(testValue)
+	}
+	
+	
+	// if (millis() - startTime > 100) {
+	// 	moveToCategories();
+	// }
+	
+}
+
+function drawNytHeader() {
+	push();
+	fill("rgb(221, 220, 212)");
+	let upperLeftHeaderX = treemapCornerX - 25;
+	let headerWidth = treemapWidth + 50;
+	let headerHeight = height - 70;
+	let headerY = (height - headerHeight)/2 + 20;
+	let nytTextY = headerY + 30;
+	
+	stroke("black");
+	strokeWeight(2);
+	rect(upperLeftHeaderX, headerY, headerWidth, headerHeight, 3, 3);
+	textSize(60);
+	textAlign(CENTER, CENTER)
+	textFont(nytFont);
+	fill("black");
+	strokeWeight(2);
+	// strokeWeight(1);
+	let firstLineY = nytTextY + 50;
+	let secondLineY = nytTextY + 53;
+	line(upperLeftHeaderX, firstLineY, upperLeftHeaderX + headerWidth, firstLineY);
+	line(upperLeftHeaderX, secondLineY, upperLeftHeaderX + headerWidth, secondLineY);
+	
+	fill("black");
+	noStroke();
+	text("The New York Times", treemapCornerX + treemapWidth/2, nytTextY);
+	
+	textFont(romanFont);
+	textSize(24);
+	text(dates[counter], treemapCornerX + 30, nytTextY + 8);
+	pop();
+}
+
+function wrapText(str, x, y, maxWidth, text_size, chosenFont = romanFont, text_align = LEFT, fillColor = color(0, 0, 0)) {
+	push();
+	noStroke();
+	textFont(chosenFont);
+  let words = split(str, ' ');
+  let currentLine = '';
+  let lineHeight = text_size + 3; // Space between lines
+  
+	textAlign(text_align, CENTER);
+	textSize(text_size);
+	fill(fillColor);
+	// fill(0, 0, 0, 10);
+  for (let i = 0; i < words.length; i++) {
+    let testLine = currentLine + words[i] + ' ';
+    let testWidth = textWidth(testLine);
+    
+    // If adding this word exceeds the max width, draw the current line and start a new one
+    if (testWidth > maxWidth) {
+      text(currentLine, x, y);
+      currentLine = words[i] + ' '; // Start new line with the current word
+      y += lineHeight; // Move down for the next line
+    } else {
+      currentLine = testLine; // Continue the current line with the word
+    }
+  }
+  
+  // Draw any remaining text
+  text(currentLine, x, y);
+	pop();
+}
+
+function wrapTextTemp(str, x, y, maxWidth, text_size, chosenFont = romanFont, text_align = LEFT) {
+	noStroke();
+	textFont(chosenFont);
+  let words = split(str, ' ');
+  let currentLine = '';
+  let lineHeight = text_size + 3; // Space between lines
+  
+	textAlign(text_align, CENTER);
+	textSize(text_size);
+	// fill(0, 0, 0, 10);
+  for (let i = 0; i < words.length; i++) {
+    let testLine = currentLine + words[i] + ' ';
+    let testWidth = textWidth(testLine);
+    
+    // If adding this word exceeds the max width, draw the current line and start a new one
+    if (testWidth > maxWidth) {
+      text(currentLine, x, y);
+      currentLine = words[i] + ' '; // Start new line with the current word
+      y += lineHeight; // Move down for the next line
+    } else {
+      currentLine = testLine; // Continue the current line with the word
+    }
+  }
+  
+  // Draw any remaining text
+  text(currentLine, x, y);
+}
+
+function updateTargetValuesFromSlider(sliderValue) {
+	counter = sliderValue;
+	
+	// Update the `value` and `currentValue` in the `data` array
+  for (let item of data) {
+    let newValue = nytAllData[item.name][counter];
+    item.value = newValue;
+  }
+}
+
+function updateTargetValues() {
+	counter = (counter + 1) % Object.values(nytAllData)[0].length; // Cycle through indices
+
+  // Update the `value` and `currentValue` in the `data` array
+  for (let item of data) {
+    let newValue = nytAllData[item.name][counter];
+    item.value = newValue;
+  }
+	
+}
+
+function createTreemap(items, x, y, w, h) {
+  if (items.length === 0) return [];
+  
+  if (items.length === 1) {
+    return [{ ...items[0], x, y, w, h }];
+  }
+
+  let totalValue = items.reduce((sum, item) => sum + item.currentValue, 0);
+  let halfValue = totalValue / 2;
+  let accumulatedValue = 0;
+  let splitIndex = -1;
+
+  for (let i = 0; i < items.length; i++) {
+    accumulatedValue += items[i].currentValue;
+    if (accumulatedValue >= halfValue) {
+      splitIndex = i;
+      break;
+    }
+  }
+
+  let group1 = items.slice(0, splitIndex + 1);
+  let group2 = items.slice(splitIndex + 1);
+
+  if (w > h) {
+    let group1Width = (accumulatedValue / totalValue) * w;
+    return [
+      ...createTreemap(group1, x, y, group1Width, h),
+      ...createTreemap(group2, x + group1Width, y, w - group1Width, h),
+    ];
+  } else {
+    let group1Height = (accumulatedValue / totalValue) * h;
+    return [
+      ...createTreemap(group1, x, y, w, group1Height),
+      ...createTreemap(group2, x, y + group1Height, w, h - group1Height),
+    ];
+  }
+}
+
+function writeTreemapText(item, roundedValue) {
+	fill(0);
+	textAlign(CENTER, CENTER);
+	
+	// Calculate the font size based on the area of the item
+	let area = item.w * item.h; // Area of the rectangle
+	let fontSize = map(area, 1000, 140000, 15, 45); // Map area to font size range
+
+	// Ensure the font size fits within the width of the rectangle
+	let maxTextWidth = item.w * 0.8; // Allow for some padding
+	textSize(fontSize);
+	let textHeight = textAscent() + textDescent();
+	while (textWidth(item.name) > maxTextWidth && fontSize > 3) {
+		fontSize -= 1; // Reduce font size if the text is too wide
+		textSize(fontSize);
+	}
+
+	// Draw the name and percentage text inside the rectangle
+	noStroke();
+	text(item.name, item.x + item.w / 2, item.y + item.h / 2);
+	
+	textSize(fontSize * (2/3));
+	
+	let textHeight2 = textAscent() + textDescent();
+	if (textHeight2 < item.h *(2/3) - textHeight) {
+		text(`${roundedValue}%`, item.x + item.w / 2, item.y + item.h / 2 + fontSize);
+	}
+}
+
+
+// ChatGPT
+function compareDates(date1, date2) {
+  // Convert both dates to "YYYYMM" format to make comparison easier
+  let formattedDate1 = date1.replace("-", "");
+  let formattedDate2 = date2.replace("-", "");
+
+  // Compare the two dates
+  return formattedDate1 <= formattedDate2;
+}
+
+function treemapSectionCondition(item, targetSection, dateStart, dateEnd) {
+	let currentDate = dates[counter]
+	if (item.name == targetSection && compareDates(dateStart, currentDate) && compareDates(currentDate, dateEnd))	{
+		fill(220);
+		// stroke("white");
+		strokeWeight(5);
+	}
+}
+
+function drawTreemap(treemap) {
+   treemap.forEach((item) => {
+     fill("white");
+     stroke(0);
+		 strokeWeight(2);
+		 let roundedValue = round(item.value * 10) / 10;
+		 if (item.w != 0 && item.h != 0) {
+			 
+			 fill("rgb(221, 220, 212)");
+			 treemapSectionCondition(item, "Business Day", "1991-07", "1998-12");
+			 
+			 treemapSectionCondition(item, "Opinion", "1999-05", "2007-12");
+			 
+			 treemapSectionCondition(item, "Blogs", "2008-01", "2013-12");
+			 
+			 treemapSectionCondition(item, "New York", "2015-01", "2016-12");
+			 treemapSectionCondition(item, "U.S.", "2015-01", "2016-12");
+			 treemapSectionCondition(item, "World", "2015-01", "2016-12");
+			 
+			 treemapSectionCondition(item, "Arts", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Theater", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Real Estate", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Food", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Climate", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Podcasts", "2017-01", "2018-12");
+			 treemapSectionCondition(item, "Smarter Living", "2017-01", "2018-12");
+			 
+			 // treemapSectionCondition(item, "Opinion", "1990-01", "2020-01");
+			 treemapSectionCondition(item, "Parenting", "2019-05", "2020-06");
+			 // if (item.value < 0.1) {
+			 // treemapSectionCondition(item, item.name, "2017-03", "2019-05");
+			 // }
+			 rect(item.x, item.y, item.w || width / data.length , item.h || height / data.length, 8, 8);
+			 if (roundedValue > 0) {
+				 writeTreemapText(item, roundedValue)
+			 }
+		 }
+     
+   });
+}
+
+// Custom Slider class
+class Slider {
+  constructor(x, y, w, min, max, startValue) {
+    this.x = x;                   // Slider x position
+    this.y = y;                   // Slider y position
+    this.width = w;               // Slider width
+    this.minVal = min;            // Minimum value of the slider
+    this.maxVal = max;            // Maximum value of the slider
+    this.value = startValue;      // Current slider value
+    this.thumbRadius = 7;        // Radius of the thumb
+    this.dragging = false;        // Whether the slider thumb is being dragged
+    this.numSteps = max - min + 1; // Total steps for discrete values
+  }
+
+  // Display the slider track and thumb
+  display() {
+		push();
+		
+		fill(221, 220, 212);
+		rect(0, 0, width, 40);
+    // Draw the track
+    stroke(180);
+    strokeWeight(5);
+    line(this.x, this.y, this.x + this.width, this.y);
+
+    // Draw the thumb
+    let thumbX = this.getThumbX();
+		
+		let isHovering = dist(mouseX, mouseY, thumbX, this.y) < this.thumbRadius;
+    
+		// Draw the thumb with a white outline if hovering
+    noStroke();
+    if (isHovering || this.dragging) {
+      stroke("white");               // White outline
+      strokeWeight(2);           // Outline thickness
+			this.thumbRadius = 10;
+    } else {
+			this.thumbRadius = 7;
+		}
+    fill("rgb(0,0,0)");
+    ellipse(thumbX, this.y, this.thumbRadius * 2);
+    noStroke();
+
+    // Display the slider value above the thumb
+    noStroke();
+    fill(0);
+		textSize(15);
+    textAlign(CENTER);
+    text(dates[this.value], thumbX, this.y - 20);
+		pop();
+  }
+
+  // Get the x position of the thumb based on the current value
+  getThumbX() {
+    return map(this.value, this.minVal, this.maxVal, this.x, this.x + this.width);
+  }
+
+  // Handle mouse press to check if the thumb is clicked
+  handleMousePressed() {
+    let thumbX = this.getThumbX();
+    if (dist(mouseX, mouseY, thumbX, this.y) < this.thumbRadius) {
+      this.dragging = true;
+			state = SPECIFIC;
+    }
+  }
+
+  // Handle mouse release to stop dragging
+  handleMouseReleased() {
+    this.dragging = false;
+  }
+
+  // Handle mouse drag to update the slider value
+  handleMouseDragged() {
+    if (this.dragging) {
+      // Constrain mouseX within the slider track limits
+      let constrainedX = constrain(mouseX, this.x, this.x + this.width);
+
+      // Map the mouse position to the nearest step
+      let stepSize = this.width / (this.numSteps - 1);
+      let nearestStep = round((constrainedX - this.x) / stepSize);
+      this.value = constrain(nearestStep, this.minVal, this.maxVal);
+    }
+  }
+	
+	handleKeyPressed() {
+    if (keyCode === LEFT_ARROW) {
+      this.value = constrain(this.value - 1, this.minVal, this.maxVal);
+    } else if (keyCode === RIGHT_ARROW) {
+      this.value = constrain(this.value + 1, this.minVal, this.maxVal);
+    }
+		updateTargetValuesFromSlider(this.value);
+		scrollY = map(this.value, 0, 371, 0, maxScroll);
+  }
+}
+
+function keyPressed() {
+	slider.handleKeyPressed();
+}
+
+function mouseReleased() {
+	slider.handleMouseReleased();
+	
+	// Stop dragging the scrollbar when the mouse is released
+  draggingScrollbar = false;
+	
+}
+
+function mouseDragged() {
+	slider.handleMouseDragged();
+	
+	// If the scrollbar is being dragged, update scrollY based on the mouse position
+  if (draggingScrollbar) {
+    let newScrollY = map(mouseY, 0, height, 0, maxScroll);
+    scrollY = constrain(newScrollY, 0, maxScroll); // Keep within bounds
+  }
+	
+}
+
+function mousePressed() {
+  // if (backButton.isMouseOver()) {
+  //   state = ANIMATE;
+  // slider.value = 0;
+  // startTime = millis();
+  // }
+
+	slider.handleMousePressed();
+	
+	// Check if the user clicks on the scrollbar to start dragging
+  let scrollbarY = map(scrollY, 0, maxScroll, 0, height - scrollbarHeight);
+
+  if (mouseX > scrollbarX - 6 && mouseX < scrollbarX + 6 && mouseY > scrollbarY && mouseY < scrollbarY + scrollbarHeight) {
+    draggingScrollbar = true; // Begin dragging
+  }
+}
+
+function mouseWheel(event) {
+  // Adjust scrollY based on the mouse wheel movement
+  scrollY += event.delta;
+  scrollY = constrain(scrollY, 0, maxScroll); // Keep within bounds
+}
+
+function drawScrollbar() {
+	fill(100);
+  scrollbarYPos = map(scrollY, 0, maxScroll, 0, height - scrollbarHeight);
+	noStroke();
+  rect(scrollbarX, scrollbarYPos, 10, scrollbarHeight);
+}
+
+function setupEarningsHeadlines() {
+	let heightSpace = actualHeight/51;
+	let index = 1;
+	let finalYAdd = 0;
+	for (let key in reportsEarningData) {
+		if (key == "Other") {
+			finalYAdd = 30;
+		}
+    for (let text of reportsEarningData[key]) {
+      positions.push({
+        text: text,
+        startX: startEarningsX,
+        startY: startEarningsY,
+        // targetX: random(0, width/3), // Target random position
+				targetX: leftStartX,
+        targetY: 0,
+				finalY: index * (heightSpace - 1) + 40 + finalYAdd,
+        currentX: startEarningsX,
+        currentY: startEarningsY,
+        category: key
+      });
+			index += 1;
+    }
+  }
+	positions = shuffle(positions);
+	index = 1;
+	for (let position in positions) {
+		positions[position]["targetY"] = index * heightSpace + 40;
+		index += 1;
+	}
+}
+
+function drawEarningsHeadlines() {
+	// let elapsed = millis() - startTime;
+	// let progress = constrain(elapsed / duration, 0, 1); // Progress: 0 to 1
+	// Headline background fill
+	let colorOpacity = 0;
+	let rectColor = color(240, 240, 240);
+	if (scrollY > 3900 + 700 && scrollY < 4400 + 700) {
+		colorOpacity = constrain(map(scrollY, 4000 + 700, 4200 + 700, 0, 255), 0, 255);
+		rectColor.setAlpha(colorOpacity);
+		fill(rectColor);
+		rect(10, 40, 310, 325, 10, 10);
+	}
+	
+	if (scrollY > 4300 + 700 && scrollY < 5200 + 700) {
+		colorOpacity = constrain(map(scrollY, 4300 + 700, 4500 + 700, 0, 255), 0, 255);
+		rectColor.setAlpha(colorOpacity);
+		fill(rectColor);
+		rect(10, height/2 + 5, 330, 350, 10, 10);
+	}
+	
+	let progress;
+	textAlign(LEFT, CENTER)
+  textSize(8);
+	if (scrollY > 3200 + 700 && scrollY <= 3700 + 700) {
+		progress = constrain(map(scrollY, 3200 + 700, 3600 + 700, 0, 1), 0, 1); // Progress: 0 to 1
+		// Update current positions using lerp
+		for (let item of positions) {
+			item.currentX = lerp(item.startX, item.targetX, progress);
+			item.currentY = lerp(item.startY, item.targetY, progress);
+			fill(0);
+			
+			text(item.text, item.currentX, item.currentY);
+		}
+	}
+	
+	if (scrollY > 3700 + 700 && scrollY < 5200 + 700) {
+		progress = constrain(map(scrollY, 3700 + 700, 4000 + 700, 0, 1), 0, 1); // Progress: 0 to 1
+		
+		for (let item of positions) {
+			item.currentX = item.targetX;
+			item.currentY = lerp(item.targetY, item.finalY, progress);
+			fill(0);
+			text(item.text, item.currentX, item.currentY);
+		}
+	}
+	
+	
+}
+
+function moveToCategories() {
+	let elapsed = millis() - startTime;
+  let progress = constrain(map(scrollY, 1000, 2000, 0, 1), 0, 1); // Progress: 0 to 1
+	
+  // Update current positions using lerp
+  for (let item of positions) {
+    // item.currentX = lerp(item.startX, item.targetX, progress);
+    item.currentY = lerp(item.startY, item.finalY, progress);
+    fill(0);
+		textSize(10);
+    text(item.text, item.currentX, item.currentY);
+  }
+}
+
+let fadeStart = 200; // Where the fade-in starts
+let fadeEnd = 600; // Where the fade-in ends
+
+function drawBlogBarplot(data) {
+  let keys = Object.keys(data);
+  let maxValue = Math.max(...Object.values(data)); // Find the largest value for scaling
+	let isHovering = false;
+  textSize(12);
+  for (let i = 0; i < keys.length; i++) {
+    let label = keys[i];
+    let value = data[label];
+    
+    // Calculate bar dimensions
+    let barWidth = map(value, 0, maxValue, 0, blogMaxBarWidth);
+    let y = blogMargin + i * (blogBarHeight + blogBarSpacing) + 19600;
+		
+		// Determine fade-in based on scrollOffset
+    let fadeProgress = map(scrollY, y - 600, y - 200, 0, 1, true);
+    let alpha = lerp(0, 255, fadeProgress);
+    
+		let currBarHeight = blogBarHeight;
+		
+		let checkBarWidth = barWidth;
+		if (barWidth < 100) {
+			checkBarWidth = 100;
+		}
+		// Check if mouse is hovering over the bar
+    if (mouseX >= blogMargin && mouseX <= blogMargin + checkBarWidth &&
+        mouseY >= y - scrollY && mouseY <= y - scrollY + blogBarHeight) {
+      hoverDescription = blogDescriptions[label]; // Set description for popup
+			
+			isHovering = true; // Indicate the mouse is hovering
+			// currBarHeight += 3;
+			stroke(1);
+    } else {
+			noStroke();
+		}
+		
+    // Draw bar
+    fill(240);
+    // noStroke();
+    // rect(blogMargin, y, barWidth, blogBarHeight);
+		rect(blogMargin, y, barWidth, currBarHeight);
+    
+		noStroke();
+    // Draw value
+    fill(0, alpha);
+		
+		// Draw label
+		textAlign(RIGHT, CENTER)
+    text(label, blogMargin - 10, y + blogBarHeight / 2);
+		
+    textAlign(LEFT, CENTER);
+    text(value, blogMargin + barWidth + 5, y + blogBarHeight / 2);
+		
+		
+		// text(mouseY, blogMargin + barWidth + 5, y + blogBarHeight / 2);
+  }
+	
+	// If not hovering over any bar, clear the description
+  if (!isHovering) {
+    hoverDescription = "";
+  }
+}
+
+function drawBarplotHover() {
+	if (hoverDescription) {
+		push();
+    let popupX = mouseX + 10; // Offset popup slightly from mouse position
+    let popupY = mouseY + 10;
+    let padding = 10;
+		textSize(15);
+		noStroke();
+    let textWidthPadding = textWidth(hoverDescription) + padding * 2;
+
+    // Draw popup background
+    fill(240, 240, 240, 200);
+    rect(popupX, popupY, textWidthPadding, 40, 5); // 40 is the height of the popup
+
+    // Draw description text
+    fill("black");
+    textAlign(LEFT, CENTER);
+    text(hoverDescription, popupX + padding, popupY + 20);
+		pop();
+  }
+}
+
+// Function to draw a simple mouse icon with a scrolling dot inside
+function drawMouseIcon(x, y) {
+	push();
+  // Draw the mouse outline
+  stroke(0);
+  noFill();
+  strokeWeight(2);
+  rectMode(CENTER);
+  rect(x, y, 40, 60, 20); // Rounded rectangle to represent the mouse
+
+  // Calculate the alpha (opacity) based on the dot's position
+  let alpha = map(dotY, mouseYMin, mouseYMax, 255, 50); // Fades as it moves downward
+
+  // Draw the dot with decreasing opacity
+  fill(0, 0, 0, alpha);
+  noStroke();
+  ellipse(x, dotY, 8, 8); // The dot moves downwards and fades inside the mouse
+	pop();
+}
+
+
+function drawGrid(data) {
+  let rectGap = 30;
+  let rows = 9;
+  let cols = 5;
+  let rectX = 0;
+  let rectY = 0;
+  let hoveredRect = null;
+
+  for (let i = 0; i < data.length; i++) {
+    let row = floor(i / cols);
+    let col = i % cols;
+    rectX = col * (rectWidth + rectGap) + 30;
+    rectY = row * (rectHeight + rectGap) + 60; // Adjusted for year text
+
+    let rectColor = getColor(data[i].party);
+		
+		let hasOutline = 0;
+		if (scrollY > 14000) {
+			hasOutline = data[i].result === "Won";
+		}
+  
+
+		let currWidth = rectWidth;
+		let currHeight = rectHeight;
+		// Check for hover
+    if (isHovered(rectX, rectY, rectWidth, rectHeight)) {
+      hoveredRect = i;
+			currWidth += 5;
+			currHeight += 5;
+			rectX -= 2.5;
+			rectY -= 2.5;
+    } else if (hoveredRect === i) {
+      hoveredRect = null;
+    }
+		
+    drawRectangle(rectX, rectY, currWidth, currHeight, rectColor, hasOutline);
+    drawYearText(rectX, rectY, data[i].year);
+
+    
+  }
+
+  // Display popup if hovered
+  if (hoveredRect !== null) {
+    displayPopup(data[hoveredRect]);
+  }
+}
+
+function getColor(party) {
+	if (scrollY < 13000) {
+		// let currColor = color(150, 150, 150);
+		// currColor
+		return color(180, 180, 180);
+	} else {
+		if (party === "Republican") {
+    	return color(247, 170, 148); // Red
+		} else if (party === "Democratic") {
+			return color(179, 201, 243); // Blue
+		} else {
+			return color(242, 220, 111); // Yellow
+		}
+	}
+  
+}
+
+function drawRectangle(x, y, w, h, c, outline) {
+  fill(c);
+  if (outline) {
+    stroke(255); // White outline
+    strokeWeight(4);
+  } else {
+    noStroke();
+  }
+  rect(x, y, w, h);
+  noStroke(); // Reset stroke
+}
+
+function drawYearText(x, y, year) {
+	push();
+	textFont(boldFont);
+  fill(0); // White text
+  noStroke();
+  textSize(14);
+  textAlign(CENTER, CENTER);
+  // text(year, x + rectWidth / 2, y - 20);
+	text(year, x + rectWidth/2, y - 15);
+	pop();
+}
+
+function isHovered(x, y, w, h) {
+  return mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h;
+}
+
+function displayPopup(data) {
+  let popupX = mouseX + 10;
+	let popupY = mouseY + 10;
+	if (data.year >= 2000) {
+		popupY = mouseY - 50;
+	}
+  fill(255, 255, 255, 230); // White background
+  noStroke();
+  rect(popupX, popupY, 550, 240, 10, 10);
+  fill(0); // Black text
+  textSize(14);
+  // textAlign(LEFT, TOP);
+	
+	textFont(boldFont)
+	textSize(20)
+  text("Candidate", popupX + 10, popupY + 10);
+	
+	textFont(romanFont)
+	textSize(14);
+  text(data.candidate, popupX + 10, popupY + 32);
+	
+	textFont(boldFont)
+	textSize(20)
+  text("Other Candidates", popupX + 10, popupY + 60);
+	
+	textFont(romanFont)
+	textSize(14);
+  text(data.otherCandidates.join(", "), popupX + 10, popupY + 82);
+	
+	textFont(boldFont)
+	textSize(20)
+  text("Endorsement Quote", popupX + 10, popupY + 110);
+	
+	textFont(romanFont)
+	textSize(14);
+  // text(data.endorsementQuote, popupX + 10, popupY + 130);
+	wrapText(data.endorsementQuote, popupX + 10, popupY + 132, 540, 14);
+}
+
+function fadeInText(currText, minScrolly, maxScrolly, x, y, currColor = color(0, 0, 0)) {
+	if (scrollY >= minScrolly && scrollY <= maxScrolly) {
+		// Get the current scroll position (replace this with your actual scroll value)
+  
+		// Determine the opacity for the fading effect
+		let opacity = 0;
+
+		// Fade in from light to dark between minScrolly and mediumScrolly
+		if (scrollY >= minScrolly && scrollY <= minScrolly + 100) {
+			opacity = map(scrollY, minScrolly, minScrolly + 100, 0, 255);
+		}
+		// Fade out from dark to light between mediumScrolly and maxScrolly
+		else if (scrollY > maxScrolly - 100 && scrollY <= maxScrolly) {
+			opacity = map(scrollY, maxScrolly - 100, maxScrolly, 255, 0);
+		} else {
+			opacity = 255;
+		} 
+
+		// Set the text color with the calculated opacity
+		// let currColor = color(0, 0, 0);
+		currColor.setAlpha(opacity);
+
+		fill(currColor);
+		// Draw the text at the specified position
+		wrapTextTemp(currText, x, y, 580, wrapTextSize);
+		// text(currText, x, y);
+	} 
+}
+
+function displayParentingArticles(y) {
+	push();
+  textSize(10); // Set text size
+	textAlign(LEFT, CENTER)
+  let lineHeight = 13; // Line spacing
+  let x = 20; // Horizontal position
+
+  for (let i = 0; i < parentingArticles.length; i++) {
+    text(parentingArticles[i], x, y + i * lineHeight);
+  }
+	pop();
+}
+
